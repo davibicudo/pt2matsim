@@ -94,18 +94,27 @@ public final class FPLANReader {
 					 28−30 	INT16 	Taktzeit in Minuten (Abstand zwischen zwei Fahrten).
 					 */
 					if(newLine.charAt(1) == 'Z') {
+						/*
+						 The layout documented above is HRDF 5.40, with a six-character
+						 Fahrtnummer. Earlier generations write five, which moves every field to
+						 its right one column left. Detected per record, because reading the wrong
+						 layout does not throw: substring succeeds and the operator lookup misses
+						 silently, leaving the line identifier built on a null operator.
+						 */
+						int shift = HafasTripNumberWidth.offset(HafasTripNumberWidth.sixCharacterFplan(newLine));
+
 						// get operator
-						String operatorCode = newLine.substring(10, 16).trim();
+						String operatorCode = newLine.substring(10 + shift, 16 + shift).trim();
 						String operator = operators.get(operatorCode);
 
 						// get the fahrtnummer
-						String fahrtnummer = newLine.substring(3, 9).trim();
+						String fahrtnummer = newLine.substring(3, 9 + shift).trim();
 
 						int numberOfDepartures = 0;
 						int cycleTime = 0;
 						try {
-							numberOfDepartures = Integer.parseInt(newLine.substring(23, 26));
-							cycleTime = Integer.parseInt(newLine.substring(27, 30));
+							numberOfDepartures = Integer.parseInt(newLine.substring(23 + shift, 26 + shift));
+							cycleTime = Integer.parseInt(newLine.substring(27 + shift, 30 + shift));
 						} catch (Exception ignored) {
 						}
 						currentFPLANRoute = new FPLANRoute(operator, operatorCode, fahrtnummer, numberOfDepartures, cycleTime);

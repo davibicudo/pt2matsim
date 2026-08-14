@@ -255,13 +255,7 @@ public final class HafasConverter {
 		for(FPLANRoute fplanRoute : routes) {
 			Id<VehicleType> vehicleTypeId = fplanRoute.getVehicleTypeId();
 
-			VehicleTypeDefaults.Type defaultVehicleType = VehicleTypeDefaults.Type.OTHER;
-
-			try {
-				defaultVehicleType = VehicleTypeDefaults.Type.valueOf(vehicleTypeId.toString());
-			} catch (IllegalArgumentException e) {
-				log.warn("Vehicle category '" + vehicleTypeId.toString() + "' is unknown. Falling back to generic OTHER and adding to schedule.");
-			}
+			VehicleTypeDefaults.Type defaultVehicleType = resolveVehicleType(vehicleTypeId.toString());
 
 			// get wheter the route using this vehicle type should be added & set transport mode
 			if(defaultVehicleType.addToSchedule) {
@@ -406,6 +400,39 @@ public final class HafasConverter {
 	private static String extractTripNumber(String departureId) {
 		int underscore = departureId.indexOf('_');
 		return underscore > 0 ? departureId.substring(0, underscore) : departureId;
+	}
+
+	/**
+	 * Resolves a HAFAS Gattung to a {@link VehicleTypeDefaults.Type}.
+	 *
+	 * <p>The Gattung is normally a generic category such as {@code S} or {@code IC}, but Swiss
+	 * exports also carry line-level codes — {@code S14}, {@code SN9} — for which the enumeration
+	 * has no entry. Falling straight back to {@code OTHER} classifies those services as non-rail
+	 * and drops them from the schedule, which on a city network can remove the busiest lines
+	 * without an error. The numeric suffix is therefore stripped and the generic category tried
+	 * before the fallback, mirroring what
+	 * {@link org.matsim.pt2matsim.gtfs.GtfsConverter#resolveVehicleType} already does for GTFS
+	 * short names.</p>
+	 */
+	public static VehicleTypeDefaults.Type resolveVehicleType(String gattung) {
+		try {
+			return VehicleTypeDefaults.Type.valueOf(gattung);
+		} catch (IllegalArgumentException ignored) {
+			// not a generic category; try the line-level form below
+		}
+		// "S14" -> "S", "SN9" -> "SN"; a code with no trailing digits is unchanged and fails again
+		String generic = gattung.replaceAll("\\d+$", "");
+		if(!generic.isEmpty() && !generic.equals(gattung)) {
+			try {
+				VehicleTypeDefaults.Type resolved = VehicleTypeDefaults.Type.valueOf(generic);
+				log.info("Vehicle category '" + gattung + "' resolved to generic category '" + generic + "'.");
+				return resolved;
+			} catch (IllegalArgumentException ignored) {
+				// fall through to OTHER
+			}
+		}
+		log.warn("Vehicle category '" + gattung + "' is unknown. Falling back to generic OTHER and adding to schedule.");
+		return VehicleTypeDefaults.Type.OTHER;
 	}
 
 	private static String lastStopId(TransitRoute route) {

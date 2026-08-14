@@ -97,17 +97,22 @@ public class DurchbiReader {
 				}
 
 				try {
-					if (line.length() < 42) {
+					/*
+					 As in FPLAN, the trip number is six characters in HRDF 5.40 and five in
+					 earlier generations. Here the shift is cumulative rather than uniform,
+					 because the record names two trips, so the field bounds are tabulated.
+					 */
+					if (line.length() < HafasTripNumberWidth.minimumDurchbiLength(line)) {
 						log.warn("Line " + lineNumber + " in DURCHBI is too short, skipping: " + line);
 						continue;
 					}
 
-					String firstTrip = line.substring(0, 6).trim();
-					String firstOperator = line.substring(7, 13).trim();
-					String lastStopOfFirstTrip = line.substring(14, 21).trim();
-					String secondTrip = line.substring(22, 28).trim();
-					String secondOperator = line.substring(29, 35).trim();
-					String bitfeldText = line.substring(36, 42).trim();
+					String firstTrip = HafasTripNumberWidth.durchbiField(line, 1);
+					String firstOperator = HafasTripNumberWidth.durchbiField(line, 2);
+					String lastStopOfFirstTrip = HafasTripNumberWidth.durchbiField(line, 3);
+					String secondTrip = HafasTripNumberWidth.durchbiField(line, 4);
+					String secondOperator = HafasTripNumberWidth.durchbiField(line, 5);
+					String bitfeldText = HafasTripNumberWidth.durchbiField(line, 6);
 
 					if (firstTrip.isEmpty() || secondTrip.isEmpty()) {
 						log.warn("Line " + lineNumber + " in DURCHBI has missing trip number(s), skipping: " + line);

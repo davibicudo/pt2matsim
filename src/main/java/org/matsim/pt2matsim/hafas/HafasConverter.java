@@ -315,6 +315,16 @@ public final class HafasConverter {
 
 				transitRoute.setTransportMode(transportMode);
 
+				// The Gattung (*G) and the line designation (*L) are separate facts, and which of
+				// them carries the S-Bahn line number moved between HRDF generations: the 2013
+				// files put it in *G ("S3"), the 2019 files leave *G generic ("S") and put it in
+				// *L. createLineId folds it into the line id, from which it cannot be read back
+				// reliably, so it is also exposed here as an attribute in its own right.
+				if(fplanRoute.getRouteDescription() != null) {
+					transitRoute.getAttributes().putAttribute("routeDescription", fplanRoute.getRouteDescription());
+				}
+				transitRoute.getAttributes().putAttribute("vehicleTypeId", vehicleTypeId.toString());
+
 				transitLine.addRoute(transitRoute);
 			}
 		}
